@@ -59,9 +59,6 @@
         <span><span class="badge metro"></span>Metro</span>
       </div>
 
-      <!-- BOTÓN DE REPOSICIONAR BURBUJA -->
-      <button id="repositionBtn" class="icon-btn" title="Reposicionar burbuja">🎯</button>
-
       <p id="distLabel">Radio: 200 m</p>
     </div>
 
@@ -104,7 +101,7 @@
 
   <!-- LÓGICA JS -->
   <script>
-  /* === Configuración base (sin cambios) === */
+  /* ========= Configuración base ========= */
   const styleVector = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
   const satSource   = {
     type:"raster",
@@ -117,6 +114,7 @@
     metro:"rgb(67 160 71)"
   };
 
+  /* ========= Helpers ========= */
   const $ = s => document.querySelector(s);
   const mpp = (lat,z) => 156543.03392*Math.cos(lat*Math.PI/180)/2**z;
   const toast = $("#toast");
@@ -127,7 +125,7 @@
     showToast._t = setTimeout(()=>toast.style.opacity=0,2500);
   };
 
-  /* === Inicializar mapa === */
+  /* ========= Inicializar mapa ========= */
   const map = new maplibregl.Map({
     container:"map", style:styleVector, center:[-74.08,4.65], zoom:12
   });
@@ -136,6 +134,7 @@
   let baseLayerIDs = [], allFeatures = [];
   let locked=false, centerLngLat=null, geoRadiusMeters=null, searchRadiusPx=60;
 
+  /* ========= Refs UI ========= */
   const rslider   = $("#rslider");
   const pill      = $("#pill");
   const lockState = $("#lockState");
@@ -144,9 +143,8 @@
   const crosshair = $("#centerCrosshair");
   const listBox   = $("#stationList");
   const drawer    = $("#drawer");
-  const repositionBtn = $("#repositionBtn");
-  let repositionMode = false;
 
+  /* ========= Carga de datos y capas ========= */
   map.on("load", async()=>{
     baseLayerIDs = map.getStyle().layers.map(l=>l.id);
     map.addSource("sat", satSource);
@@ -155,19 +153,18 @@
       layout:{visibility:"none"}
     }, baseLayerIDs[0]);
 
-    const data = await (await fetch("paradas_unificadas.geojson")).json();
+    const data = await fetch("paradas_unificadas.geojson").then(r=>r.json());
     allFeatures = data.features;
 
-    map.addSource("inside",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+    map.addSource("inside",{ type:"geojson", data:{type:"FeatureCollection",features:[]} });
     map.addLayer({
       id:"dots", type:"circle", source:"inside",
       paint:{
         "circle-radius":6,
-        "circle-color":[
-          "match",["get","tipo"],
-          "tm",  typeColor.tm,
+        "circle-color":[ "match", ["get","tipo"],
+          "tm",   typeColor.tm,
           "metro",typeColor.metro,
-              typeColor.sitp
+                  typeColor.sitp
         ],
         "circle-stroke-width":1,
         "circle-stroke-color":"#fff",
@@ -175,11 +172,11 @@
       }
     });
 
-    const popup = new maplibregl.Popup({closeButton:false,closeOnClick:false});
+    const popup = new maplibregl.Popup({ closeButton:false, closeOnClick:false });
     map.on("mouseenter","dots",e=>{
       if(!locked||!e.features.length) return;
       map.getCanvas().style.cursor="pointer";
-      const p=e.features[0],props=p.properties;
+      const p = e.features[0], props=p.properties;
       const name = props.nombre_par ?? props.NOMBRE_ESTACION ?? "Parada";
       popup.setLngLat(p.geometry.coordinates)
            .setHTML(`<strong>${name}</strong>`)
@@ -191,59 +188,57 @@
     });
   });
 
+  /* ========= Overlay & lista ========= */
   const drawOverlay = ()=>{
     if(!centerLngLat) return;
     const p = map.project(centerLngLat);
-    circle.style.left = `${p.x-searchRadiusPx}px`;
-    circle.style.top  = `${p.y-searchRadiusPx}px`;
+    circle.style.left  = `${p.x-searchRadiusPx}px`;
+    circle.style.top   = `${p.y-searchRadiusPx}px`;
     circle.style.width = circle.style.height = `${searchRadiusPx*2}px`;
     crosshair.style.left = `${p.x}px`;
     crosshair.style.top  = `${p.y}px`;
     distLabel.textContent =
       `Radio: ${Math.round(searchRadiusPx*mpp(centerLngLat.lat,map.getZoom()))} m`;
   };
-
   const updateList = ()=>{
     if(!centerLngLat) return;
-    const c = map.project(centerLngLat);
+    const cpx = map.project(centerLngLat);
     const inside = allFeatures.filter(f=>{
       const p = map.project(f.geometry.coordinates);
-      const dx=p.x-c.x, dy=p.y-c.y;
+      const dx=p.x-cpx.x, dy=p.y-cpx.y;
       return dx*dx+dy*dy <= searchRadiusPx*searchRadiusPx;
     });
-    map.getSource("inside").setData({
-      type:"FeatureCollection",features:inside
-    });
+    map.getSource("inside").setData({ type:"FeatureCollection", features:inside });
     inside.sort((a,b)=>{
       const pa=map.project(a.geometry.coordinates),
             pb=map.project(b.geometry.coordinates);
-      return (pa.x-c.x)**2+(pa.y-c.y)**2 - (pb.x-c.x)**2-(pb.y-c.y)**2;
+      return (pa.x-cpx.x)**2+(pa.y-cpx.y)**2 - (pb.x-cpx.x)**2-(pb.y-cpx.y)**2;
     });
     listBox.innerHTML = inside.map(f=>{
-      const t=(f.properties.tipo||"").toLowerCase();
+      const t = (f.properties.tipo||"").toLowerCase();
       const color = t==="tm"?typeColor.tm : t==="metro"?typeColor.metro : typeColor.sitp;
       const name = f.properties.nombre_par ?? f.properties.NOMBRE_ESTACION ?? "Parada";
       return `<li><span class="badge" style="background:${color}"></span>${name}</li>`;
     }).join("");
     showToast(`${inside.length} paradas encontradas`);
   };
-
   const relock = ()=>{
     lockState.textContent = `Estado: ${locked?"Fijada":"Libre"}`;
     drawOverlay();
     updateList();
   };
 
-  map.on("mousemove", e=>{
+  /* ========= Eventos mapa ========= */
+  map.on("mousemove",e=>{
     if(locked) return;
     centerLngLat = e.lngLat; drawOverlay(); updateList();
   });
-  map.on("move", ()=>{
+  map.on("move",()=>{
     if(locked)
       searchRadiusPx = geoRadiusMeters / mpp(centerLngLat.lat,map.getZoom());
     drawOverlay(); updateList();
   });
-  map.on("contextmenu", e=>{
+  map.on("contextmenu",e=>{
     e.preventDefault();
     locked = !locked;
     if(locked){
@@ -256,7 +251,8 @@
     relock();
   });
 
-  rslider.addEventListener("input", e=>{
+  /* ========= Slider ========= */
+  rslider.addEventListener("input",e=>{
     searchRadiusPx = +e.target.value;
     pill.textContent = searchRadiusPx;
     pill.style.setProperty("--pos",`${(searchRadiusPx-30)/60*100}%`);
@@ -265,51 +261,34 @@
     drawOverlay(); updateList();
   });
 
-  $("#basemapSel").addEventListener("change", e=>{
+  /* ========= Basemap selector ========= */
+  $("#basemapSel").addEventListener("change",e=>{
     const sat = e.target.value==="sat";
-    map.setLayoutProperty("sat-layer","visibility",sat?"visible":"none");
-    baseLayerIDs.forEach(id=>map.setLayoutProperty(id,"visibility",sat?"none":"visible"));
+    map.setLayoutProperty("sat-layer","visibility", sat?"visible":"none");
+    baseLayerIDs.forEach(id=>map.setLayoutProperty(id,"visibility", sat?"none":"visible"));
   });
 
-  $("#drawerToggle").addEventListener("click", ()=>drawer.classList.toggle("open"));
-  $("#helpBtn").addEventListener("click", ()=>$("#helpModal").showModal());
-  $("#closeHelp").addEventListener("click", ()=>$("#helpModal").close());
+  /* ========= Drawer toggle ========= */
+  $("#drawerToggle").addEventListener("click",()=>drawer.classList.toggle("open"));
 
-  /* ——— MODO REPOSICIONAR ——— */
-  repositionBtn.addEventListener("click", ()=>{
-    repositionMode = !repositionMode;
-    repositionBtn.classList.toggle("active", repositionMode);
-    showToast(repositionMode
-      ? "Toca el mapa para mover la burbuja"
-      : "Modo reposicionar desactivado"
-    );
-  });
-  map.on("click", e=>{
-    if(!repositionMode) return;
-    locked = true;
-    centerLngLat = e.lngLat;
-    geoRadiusMeters = searchRadiusPx * mpp(centerLngLat.lat,map.getZoom());
-    repositionMode = false;
-    repositionBtn.classList.remove("active");
-    relock();
-    showToast("Burbuja reposicionada y fijada");
-  });
+  /* ========= Help modal ========= */
+  $("#helpBtn").addEventListener("click",()=>$("#helpModal").showModal());
+  $("#closeHelp").addEventListener("click",()=>$("#helpModal").close());
 
-  /* ——— BÚSQUEDA Nominatim + coords (sin cambios) ——— */
+  /* ========= Búsqueda Nominatim + coords ========= */
   const input   = $("#searchInput");
   const suggest = $("#suggestBox");
   let debounce;
-  input.addEventListener("input", ()=>{
+  input.addEventListener("input",()=>{
     clearTimeout(debounce);
     const q=input.value.trim();
     if(!q){ suggest.style.display="none"; return; }
     if(/^-?\d+(\.\d+)?[, ]\s*-?\d+(\.\d+)?$/.test(q)){
       suggest.style.display="none"; return;
     }
-    debounce = setTimeout(async()=>{
+    debounce=setTimeout(async()=>{
       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=0&viewbox=-74.20,4.92,-73.70,4.35&bounded=1`;
-      const res = await fetch(url,{headers:{"Accept-Language":"es"}});
-      const js  = await res.json();
+      const js = await (await fetch(url,{headers:{"Accept-Language":"es"}})).json();
       if(!js.length){ suggest.style.display="none"; return; }
       suggest.innerHTML = js.map(p=>
         `<li data-lat="${p.lat}" data-lon="${p.lon}">${p.display_name}</li>`
@@ -317,12 +296,12 @@
       suggest.style.display="block";
     },350);
   });
-  suggest.addEventListener("mousedown", e=>{
+  suggest.addEventListener("mousedown",e=>{
     e.preventDefault();
     const li=e.target.closest("li");
-    if(!li) return;
+    if(!li)return;
     const lat=+li.dataset.lat, lon=+li.dataset.lon;
-    input.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    input.value=`${lat.toFixed(5)}, ${lon.toFixed(5)}`;
     suggest.style.display="none";
     locked = true;
     centerLngLat={lat,lng:lon};
@@ -331,9 +310,32 @@
     map.easeTo({center:[lon,lat]});
   });
 
+  /* ========= Drag táctil dentro de la burbuja ========= */
+  let bubbleDragging = false;
+  circle.addEventListener("touchstart",e=>{
+    bubbleDragging = true;
+    map.dragPan.disable();
+    e.stopPropagation();
+  });
+  document.addEventListener("touchmove",e=>{
+    if(!bubbleDragging) return;
+    const t=e.touches[0];
+    const rect=map.getContainer().getBoundingClientRect();
+    const point=[t.clientX-rect.left,t.clientY-rect.top];
+    centerLngLat=map.unproject(point);
+    drawOverlay(); updateList();
+    e.preventDefault();
+  });
+  document.addEventListener("touchend",e=>{
+    if(!bubbleDragging) return;
+    bubbleDragging=false;
+    map.dragPan.enable();
+  });
+
+  /* ========= Inicio ========= */
   pill.style.setProperty("--pos","50%");
   drawOverlay();
-  showToast("Usa el ratón para explorar 🚍");
+  showToast("Usa el ratón (o toque) para explorar 🚍");
   lucide.createIcons();
   </script>
 </body>

@@ -1,4 +1,4 @@
-/* -------- Variables de diseño -------- */
+/* ---------- Variables de diseño ---------- */
 :root{
   --primary:  25 118 210;
   --tm:      229  57  53;
@@ -8,15 +8,15 @@
   font-family: Inter,system-ui,sans-serif;
 }
 
-/* -------- Reset básico -------- */
+/* ---------- Reset básico ---------- */
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;color:#212121;overflow:hidden}
 h1,h2{font-family:Poppins,Inter,sans-serif}
 
-/* -------- Contenedor mapa -------- */
+/* ---------- Contenedor mapa ---------- */
 #map{position:absolute;inset:0}
 
-/* -------- AppBar -------- */
+/* ---------- AppBar ---------- */
 #appBar{
   position:absolute;inset:0 0 auto 0;height:48px;
   display:flex;align-items:center;padding:0 16px;gap:8px;
@@ -30,14 +30,14 @@ h1,h2{font-family:Poppins,Inter,sans-serif}
   flex:1;
 }
 
-/* -------- Icon buttons -------- */
+/* ---------- Icon buttons ---------- */
 .icon-btn{
   background:none;border:none;color:inherit;cursor:pointer;padding:4px;
   display:inline-flex;
 }
 .icon-btn:hover{opacity:.8}
 
-/* -------- Drawer / Panel derecho -------- */
+/* ---------- Drawer / Panel derecho ---------- */
 #drawer{
   position:absolute;top:64px;right:16px;width:280px;
   max-height:calc(100% - 80px);display:flex;flex-direction:column;
@@ -80,23 +80,6 @@ h1,h2{font-family:Poppins,Inter,sans-serif}
 .badge.tm    { background: rgb(var(--tm)); }
 .badge.metro { background: rgb(var(--metro)); }
 
-/* Botón reposicionar */
-#repositionBtn{
-  font-size:18px;
-  padding:4px 6px;
-  margin:8px 0;
-  background:transparent;
-  border:1px solid #eee;
-  border-radius:var(--radius);
-  transition:background .2s,border-color .2s;
-}
-#repositionBtn:hover{background:#f5f5f5}
-#repositionBtn.active{
-  background:rgb(var(--primary));
-  border-color:rgb(var(--primary));
-  color:#fff;
-}
-
 #distLabel{font-size:13px}
 
 #stationBox{
@@ -114,13 +97,13 @@ h1,h2{font-family:Poppins,Inter,sans-serif}
 }
 #stationList li:last-child{border-bottom:none}
 
-/* -------- Drawer toggle móvil -------- */
+/* ---------- Drawer toggle móvil ---------- */
 #drawerToggle{
   display:none;position:absolute;top:56px;right:16px;z-index:5;
   background:#fff;border-radius:50%;box-shadow:var(--shadow);
 }
 
-/* -------- Selector basemap -------- */
+/* ---------- Selector basemap ---------- */
 #basemapBox{
   position:absolute;bottom:16px;left:16px;
   display:flex;align-items:center;gap:6px;
@@ -131,7 +114,7 @@ h1,h2{font-family:Poppins,Inter,sans-serif}
 }
 #basemapSel{font-size:14px;padding:2px 6px}
 
-/* -------- Buscador -------- */
+/* ---------- Buscador ---------- */
 #searchBox{
   position:absolute;top:64px;left:16px;
   display:flex;align-items:center;gap:8px;
@@ -155,7 +138,7 @@ h1,h2{font-family:Poppins,Inter,sans-serif}
 }
 #suggestBox li:hover{background:#f5f5f5}
 
-/* -------- Burbuja y crosshair -------- */
+/* ---------- Burbuja y crosshair ---------- */
 #searchCircle{
   position:absolute;
   border:2px dashed rgb(var(--primary));
@@ -176,7 +159,7 @@ h1,h2{font-family:Poppins,Inter,sans-serif}
   pointer-events:none;z-index:2;
 }
 
-/* -------- Snackbar -------- */
+/* ---------- Snackbar ---------- */
 #toast{
   position:absolute;bottom:12px;left:50%;
   transform:translateX(-50%);
@@ -187,7 +170,14 @@ h1,h2{font-family:Poppins,Inter,sans-serif}
   z-index:5;
 }
 
-/* -------- Modal -------- */
+/* ======== Ajuste mobile: subir el toast ======== */
+@media (max-width:768px){
+  #toast {
+    bottom: 80px !important;
+  }
+}
+
+/* ---------- Modal ---------- */
 dialog{
   border:none;border-radius:var(--radius);
   padding:24px 32px;max-width:420px;
@@ -200,10 +190,10 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
   cursor:pointer;
 }
 
-/* -------- Responsive -------- */
+/* ---------- Responsive drawer ---------- */
 @media (max-width:768px){
   #drawer{transform:translateX(100%)}
-  #drawer.open{transform:none}
+  #drawer.open{transform:translateX(0)}
   #drawerToggle{display:block}
   #stationBox{max-height:220px}
 }
@@ -212,13 +202,4 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .maplibregl-ctrl-bottom-left .maplibregl-ctrl{
   background:rgba(255,255,255,.85);
   border-radius:var(--radius);
-}
-/* En style.css, baja el slider con todo lo que viene debajo */
-.slider-wrap {
-  margin-top: 20px;
-}
-/* Mover controles de zoom/brújula por encima del selector */
-.maplibregl-ctrl-bottom-left {
-  bottom: 60px !important; /* ajusta este valor según necesites */
-  left: 16px !important;     /* iguala el padding horizontal */
 }
