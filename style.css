@@ -143,7 +143,7 @@ h1,h2{font-family:Poppins,Inter,sans-serif}
   position:absolute;
   border:2px dashed rgb(var(--primary));
   border-radius:50%;
-  pointer-events:none;
+  pointer-events: auto;
   animation:pulse 2s infinite;
   z-index:2;
 }
@@ -203,3 +203,9 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
   background:rgba(255,255,255,.85);
   border-radius:var(--radius);
 }
+
+/* Sube los controles de zoom/brújula en todas las pantallas */
+.maplibregl-ctrl-bottom-left {
+  bottom: 80px !important;
+}
+
