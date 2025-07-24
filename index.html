@@ -2,54 +2,35 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Explora paradas de transporte público</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- MapLibre GL -->
-  <link rel="stylesheet"
-        href="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css">
+  <title>Explora paradas</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css" />
   <script src="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
-
-  <!-- Fuentes -->
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Poppins:wght@600&display=swap"
-        rel="stylesheet">
-
-  <!-- Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Poppins:wght@600&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- Estilos propios -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- HEADER -->
   <header id="appBar">
     <h1>Explora paradas</h1>
-    <button id="helpBtn" class="icon-btn" aria-label="Ayuda">
-      <i data-lucide="help-circle"></i>
-    </button>
+    <button id="helpBtn" class="icon-btn" aria-label="Ayuda"><i data-lucide="help-circle"></i></button>
   </header>
 
-  <!-- MAPA -->
-  <div id="map" aria-label="Mapa principal"></div>
+  <div id="map"></div>
 
   <!-- BUSCADOR -->
   <form id="searchBox" role="search" autocomplete="off">
     <i data-lucide="map-pin"></i>
-    <input id="searchInput" type="text"
-           placeholder="Buscar dirección o lat, lon" aria-label="Buscar ubicación">
+    <input id="searchInput" placeholder="Buscar dirección o lat, lon" aria-label="Buscar ubicación" />
     <ul id="suggestBox" role="listbox"></ul>
   </form>
 
-  <!-- DRAWER / PANEL DERECHO -->
+  <!-- PANEL -->
   <aside id="drawer">
     <div class="slider-card">
       <label for="rslider" class="slider-label">Radio de búsqueda</label>
-      <div class="slider-wrap">
-        <input id="rslider" type="range" min="30" max="90" value="60" step="2"
-               aria-label="Radio búsqueda">
-        <!-- span id="pill">60</span> eliminado -->
-      </div>
+      <div class="slider-wrap"><input id="rslider" type="range" min="200" max="2000" value="2000" step="10" /></div>
       <p class="hint">🖱️ Click derecho para fijar/liberar burbuja</p>
       <p id="lockState" class="status">Estado: Libre</p>
 
@@ -59,291 +40,182 @@
         <span><span class="badge metro"></span>Metro</span>
       </div>
 
-      <p id="distLabel">Radio: 200 m</p>
+      <p id="distLabel">Radio: 2000&nbsp;m</p>
     </div>
-
     <div id="stationBox">
       <h2>Paradas cercanas</h2>
-      <ul id="stationList" tabindex="0" aria-label="Lista de paradas"></ul>
+      <ul id="stationList" tabindex="0"></ul>
     </div>
   </aside>
-  <button id="drawerToggle" class="icon-btn" aria-label="Abrir lista">
-    <i data-lucide="menu"></i>
-  </button>
+  <button id="drawerToggle" class="icon-btn" aria-label="Abrir lista"><i data-lucide="menu"></i></button>
 
-  <!-- SELECTOR BASEMAP -->
+  <!-- BASEMAP -->
   <div id="basemapBox">
     <i data-lucide="layers"></i>
-    <select id="basemapSel" aria-label="Selector de basemap">
-      <option value="osm" selected>Open Street Map</option>
-      <option value="sat">Satélite</option>
-    </select>
+    <select id="basemapSel"><option value="osm" selected>Open Street Map</option><option value="sat">Satélite</option></select>
   </div>
 
   <!-- OVERLAYS -->
-  <div id="searchCircle" aria-hidden="true"></div>
-  <div id="centerCrosshair" aria-hidden="true"></div>
+  <div id="searchCircle"></div><div id="centerCrosshair"></div>
 
-  <!-- MODAL AYUDA -->
-  <dialog id="helpModal" aria-labelledby="modalTitle">
-    <h2 id="modalTitle">¿Cómo usar la aplicación?</h2>
+  <!-- AYUDA -->
+  <dialog id="helpModal">
+    <h2>¿Cómo usar la aplicación?</h2>
     <ol>
-      <li>Mueve el ratón y explora las paradas dentro del círculo.</li>
+      <li>Mueve ratón o dedo para explorar paradas dentro del círculo.</li>
       <li>Ajusta el radio con el deslizador.</li>
-      <li>Haz <strong>click derecho</strong> para fijar/liberar la burbuja.</li>
-      <li>Busca una dirección o escribe <em>lat, lon</em> y presiona Enter.</li>
+      <li>Click derecho (o toque largo) fija/libera la burbuja.</li>
+      <li>Busca con dirección o “lat,lon”.</li>
     </ol>
     <button id="closeHelp" class="primary-btn">¡Entendido!</button>
   </dialog>
 
-  <!-- SNACKBAR -->
   <div id="toast" role="status" aria-live="polite"></div>
 
   <script>
-  // -- Configuración base --
-  const styleVector = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
-  const satSource   = {
-    type:"raster",
-    tiles:["https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
-    tileSize:256
+  const styleVector="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+  const satSource={type:"raster",tiles:["https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],tileSize:256};
+  const typeColor={sitp:"rgb(25 118 210)",tm:"rgb(229 57 53)",metro:"rgb(67 160 71)"};
+
+  const $=s=>document.querySelector(s);
+  const toast=$("#toast");
+  const showToast=m=>{toast.textContent=m;toast.style.opacity=1;clearTimeout(showToast._t);showToast._t=setTimeout(()=>toast.style.opacity=0,1800);};
+
+  let center=null, radiusMeters=2000, locked=false, features=[], baseLayers=[];
+
+  const map=new maplibregl.Map({container:"map",style:styleVector,center:[-74.08,4.65],zoom:12});
+  map.addControl(new maplibregl.NavigationControl(),"bottom-left");
+
+  const circle=$("#searchCircle"),cross=$("#centerCrosshair"),rslider=$("#rslider"),
+        lockState=$("#lockState"),distLabel=$("#distLabel"),list=$("#stationList"),drawer=$("#drawer");
+
+  const mpp=(lat,z)=>156543.03392*Math.cos(lat*Math.PI/180)/2**z;
+
+  const drawOverlay=()=>{
+    if(!center)return;
+    const p=map.project(center);
+    const zoom=map.getZoom();
+    const pxPerMeter=1/mpp(center.lat, zoom);
+    const radiusPx=radiusMeters * pxPerMeter;
+
+    circle.style.left=`${p.x-radiusPx}px`;
+    circle.style.top=`${p.y-radiusPx}px`;
+    circle.style.width=circle.style.height=`${radiusPx*2}px`;
+    cross.style.left=`${p.x}px`;cross.style.top=`${p.y}px`;
+
+    distLabel.textContent=`Radio: ${Math.round(radiusMeters)} m`;
   };
-  const typeColor = {
-    sitp: "rgb(25 118 210)",
-    tm:   "rgb(229 57 53)",
-    metro:"rgb(67 160 71)"
-  };
 
-  // -- Helpers --
-  const $ = s => document.querySelector(s);
-  const mpp = (lat,z) => 156543.03392*Math.cos(lat*Math.PI/180)/2**z;
-  const toast = $("#toast");
-  const showToast = msg => {
-    toast.textContent = msg;
-    toast.style.opacity = 1;
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(()=>toast.style.opacity=0,2500);
-  };
-
-  // -- Mapa --
-  const map = new maplibregl.Map({
-    container:"map", style:styleVector, center:[-74.08,4.65], zoom:12
-  });
-  map.addControl(new maplibregl.NavigationControl(), "bottom-left");
-
-  let baseLayerIDs = [], allFeatures = [];
-  let locked=false, centerLngLat=null, searchRadiusPx=60;
-
-  const rslider   = $("#rslider");
-  const lockState = $("#lockState");
-  const distLabel = $("#distLabel");
-  const circle    = $("#searchCircle");
-  const crosshair = $("#centerCrosshair");
-  const listBox   = $("#stationList");
-  const drawer    = $("#drawer");
-
-  map.on("load", async()=>{
-    baseLayerIDs = map.getStyle().layers.map(l=>l.id);
-    map.addSource("sat", satSource);
-    map.addLayer({
-      id:"sat-layer", type:"raster", source:"sat",
-      layout:{visibility:"none"}
-    }, baseLayerIDs[0]);
-
-    const data = await fetch("paradas_unificadas.geojson").then(r=>r.json());
-    allFeatures = data.features;
-
-    map.addSource("inside",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
-    map.addLayer({
-      id:"dots", type:"circle", source:"inside",
-      paint:{
-        "circle-radius":6,
-        "circle-color":[
-          "match",["get","tipo"],
-          "tm",   typeColor.tm,
-          "metro",typeColor.metro,
-                  typeColor.sitp
-        ],
-        "circle-stroke-width":1,
-        "circle-stroke-color":"#fff",
-        "circle-opacity":0.9
-      }
-    });
-
-    const popup = new maplibregl.Popup({closeButton:false,closeOnClick:false});
-    map.on("mouseenter","dots",e=>{
-      if(!locked||!e.features.length) return;
-      map.getCanvas().style.cursor="pointer";
-      const p=e.features[0],props=p.properties;
-      const name = props.nombre_par ?? props.NOMBRE_ESTACION ?? "Parada";
-      popup.setLngLat(p.geometry.coordinates).setHTML(`<strong>${name}</strong>`).addTo(map);
-    });
-    map.on("mouseleave","dots",()=>{
-      map.getCanvas().style.cursor="";
-      popup.remove();
-    });
-  });
-
-  // -- Overlay y lista --
-  function drawOverlay(){
-    if(!centerLngLat) return;
-    const p = map.project(centerLngLat);
-    circle.style.left  = `${p.x-searchRadiusPx}px`;
-    circle.style.top   = `${p.y-searchRadiusPx}px`;
-    circle.style.width = circle.style.height = `${searchRadiusPx*2}px`;
-    crosshair.style.left = `${p.x}px`;
-    crosshair.style.top  = `${p.y}px`;
-    distLabel.textContent = `Radio: ${Math.round(searchRadiusPx*mpp(centerLngLat.lat,map.getZoom()))} m`;
-  }
-  function updateList(){
-    if(!centerLngLat) return;
-    const c = map.project(centerLngLat);
-    const inside = allFeatures.filter(f=>{
-      const p = map.project(f.geometry.coordinates);
-      const dx=p.x-c.x, dy=p.y-c.y;
-      return dx*dx+dy*dy <= searchRadiusPx*searchRadiusPx;
+  const updateList=()=>{
+    if(!center)return;
+    const zoom=map.getZoom();
+    const pxPerMeter=1/mpp(center.lat, zoom);
+    const radiusPx=radiusMeters * pxPerMeter;
+    const c=map.project(center);
+    const inside=features.filter(f=>{
+      const p=map.project(f.geometry.coordinates),
+            dx=p.x-c.x,dy=p.y-c.y;
+      return dx*dx+dy*dy<=radiusPx*radiusPx;
     });
     map.getSource("inside").setData({type:"FeatureCollection",features:inside});
-    inside.sort((a,b)=>{
-      const pa=map.project(a.geometry.coordinates),
-            pb=map.project(b.geometry.coordinates);
-      return (pa.x-c.x)**2+(pa.y-c.y)**2 - (pb.x-c.x)**2-(pb.y-c.y)**2;
-    });
-    listBox.innerHTML = inside.map(f=>{
-      const t=(f.properties.tipo||"").toLowerCase();
-      const color = t==="tm"?typeColor.tm : t==="metro"?typeColor.metro : typeColor.sitp;
-      const name = f.properties.nombre_par ?? f.properties.NOMBRE_ESTACION ?? "Parada";
-      return `<li><span class="badge" style="background:${color}"></span>${name}</li>`;
-    }).join("");
+    list.innerHTML=inside.map(f=>{
+      const t=(f.properties.tipo||"").toLowerCase(),col=t==="tm"?typeColor.tm:t==="metro"?typeColor.metro:typeColor.sitp,
+            n=f.properties.nombre_par??f.properties.NOMBRE_ESTACION??"Parada";
+      return `<li><span class="badge" style="background:${col}"></span>${n}</li>`;}).join("");
     showToast(`${inside.length} paradas encontradas`);
-  }
-  function relock(){
-    lockState.textContent = `Estado: ${locked?"Fijada":"Libre"}`;
-    drawOverlay();
-    updateList();
-  }
+  };
 
-  // -- Eventos mapa --
-  map.on("mousemove",e=>{
-    if(locked) return;
-    centerLngLat = e.lngLat; drawOverlay(); updateList();
-  });
-  map.on("move",()=>{
-    drawOverlay(); updateList();  // sin tocar searchRadiusPx
+  const relock=()=>{lockState.textContent=`Estado: ${locked?"Fijada":"Libre"}`;drawOverlay();updateList();};
+
+  map.on("load",async()=>{
+    baseLayers=map.getStyle().layers.map(l=>l.id);
+    map.addSource("sat",satSource);
+    map.addLayer({id:"sat-layer",type:"raster",source:"sat",layout:{visibility:"none"}},baseLayers[0]);
+
+    features=(await fetch("paradas_unificadas.geojson").then(r=>r.json())).features;
+    map.addSource("inside",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+    map.addLayer({id:"dots",type:"circle",source:"inside",
+      paint:{"circle-radius":6,"circle-color":["match",["get","tipo"],"tm",typeColor.tm,"metro",typeColor.metro,typeColor.sitp],"circle-stroke-width":1,"circle-stroke-color":"#fff","circle-opacity":0.9}});
+    const popup=new maplibregl.Popup({closeButton:false,closeOnClick:false});
+    map.on("mouseenter","dots",e=>{
+      if(!locked||!e.features.length)return;
+      const name=e.features[0].properties.nombre_par??e.features[0].properties.NOMBRE_ESTACION??"Parada";
+      popup.setLngLat(e.features[0].geometry.coordinates).setHTML(`<strong>${name}</strong>`).addTo(map);
+      map.getCanvas().style.cursor="pointer";
+    });
+    map.on("mouseleave","dots",()=>{popup.remove();map.getCanvas().style.cursor="";});
   });
 
-  // clic derecho SOBRE EL MAPA
-  map.on("contextmenu", e=>{
+  map.on("mousemove",e=>{if(!locked){center=e.lngLat;drawOverlay();updateList();}});
+  map.on("move",()=>{drawOverlay();updateList();});
+
+  map.getCanvas().addEventListener("contextmenu",e=>{
     e.preventDefault();
-    locked = !locked;
-    if(locked){
-      centerLngLat = e.lngLat;
-      showToast("Burbuja fijada");
-    } else {
-      showToast("Burbuja liberada");
+    const rect=map.getContainer().getBoundingClientRect(),
+          ptX=e.clientX-rect.left,ptY=e.clientY-rect.top;
+    const pxPerMeter=1/mpp(center?.lat ?? 0, map.getZoom());
+    const radiusPx=radiusMeters * pxPerMeter;
+    const dist=Math.hypot(ptX-(circle.offsetLeft+radiusPx),ptY-(circle.offsetTop+radiusPx));
+    if(dist<=radiusPx || !locked){
+      locked=!locked;
+      if(locked) center=map.unproject([ptX,ptY]);
+      showToast(locked?"Burbuja fijada":"Burbuja liberada");
+      relock();
     }
-    relock();
-  });
-  // clic derecho SOBRE EL CÍRCULO
-  circle.addEventListener("contextmenu", e=>{
-    e.preventDefault();
-    const rect = map.getContainer().getBoundingClientRect();
-    const pt   = [e.clientX-rect.left, e.clientY-rect.top];
-    locked = !locked;
-    if(locked){
-      centerLngLat = map.unproject(pt);
-      showToast("Burbuja fijada");
-    } else {
-      showToast("Burbuja liberada");
-    }
-    relock();
   });
 
-  // -- Slider --
-  rslider.addEventListener("input",e=>{
-    searchRadiusPx = +e.target.value;
-    drawOverlay(); updateList();
+  rslider.addEventListener("input",e=>{radiusMeters=+e.target.value;drawOverlay();updateList();});
+
+  $("#basemapSel").addEventListener("change",e=>{
+    const sat=e.target.value==="sat";
+    map.setLayoutProperty("sat-layer","visibility",sat?"visible":"none");
+    baseLayers.forEach(id=>map.setLayoutProperty(id,"visibility",sat?"none":"visible"));
   });
 
-  // -- Basemap selector --
-  $("#basemapSel").addEventListener("change", e=>{
-    const sat = e.target.value==="sat";
-    map.setLayoutProperty("sat-layer","visibility", sat?"visible":"none");
-    baseLayerIDs.forEach(id=>map.setLayoutProperty(id,"visibility", sat?"none":"visible"));
-  });
+  $("#drawerToggle").addEventListener("click",()=>drawer.classList.toggle("open"));
+  $("#helpBtn").addEventListener("click",()=>$("#helpModal").showModal());
+  $("#closeHelp").addEventListener("click",()=>$("#helpModal").close());
 
-  // -- Drawer toggle --
-  $("#drawerToggle").addEventListener("click", ()=>drawer.classList.toggle("open"));
-
-  // -- Ayuda --
-  $("#helpBtn").addEventListener("click", ()=>$("#helpModal").showModal());
-  $("#closeHelp").addEventListener("click", ()=>$("#helpModal").close());
-
-  // -- Nominatim & coords --
-  const input   = $("#searchInput");
-  const suggest = $("#suggestBox");
-  let debounce;
+  const input=$("#searchInput"),sug=$("#suggestBox");let deb;
   input.addEventListener("input",()=>{
-    clearTimeout(debounce);
-    const q=input.value.trim();
-    if(!q){ suggest.style.display="none"; return; }
-    if(/^-?\d+(\.\d+)?[, ]\s*-?\d+(\.\d+)?$/.test(q)){
-      suggest.style.display="none"; return;
-    }
-    debounce = setTimeout(async()=>{
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=0&viewbox=-74.20,4.92,-73.70,4.35&bounded=1`;
-      const js  = await (await fetch(url,{headers:{"Accept-Language":"es"}})).json();
-      if(!js.length){ suggest.style.display="none"; return; }
-      suggest.innerHTML = js.map(p=>
-        `<li data-lat="${p.lat}" data-lon="${p.lon}">${p.display_name}</li>`
-      ).join("");
-      suggest.style.display="block";
+    clearTimeout(deb);const q=input.value.trim();
+    if(!q || /^-?\d+(\.\d+)?[, ]\s*-?\d+(\.\d+)?$/.test(q)){sug.style.display="none";return;}
+    deb=setTimeout(async()=>{
+      const js=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&viewbox=-74.20,4.92,-73.70,4.35&bounded=1`,{headers:{"Accept-Language":"es"}}).then(r=>r.json());
+      if(!js.length){sug.style.display="none";return;}
+      sug.innerHTML=js.map(p=>`<li data-lat="${p.lat}" data-lon="${p.lon}">${p.display_name}</li>`).join("");
+      sug.style.display="block";
     },350);
   });
-  suggest.addEventListener("mousedown",e=>{
+  sug.addEventListener("mousedown",e=>{
     e.preventDefault();
-    const li = e.target.closest("li");
-    if(!li) return;
-    const lat = +li.dataset.lat, lon = +li.dataset.lon;
-    input.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-    suggest.style.display="none";
-    locked = true;
-    centerLngLat = {lat,lng:lon};
-    relock();
-    map.easeTo({center:[lon,lat]});
+    const li=e.target.closest("li");if(!li)return;
+    const lat=+li.dataset.lat,lon=+li.dataset.lon;
+    input.value=`${lat.toFixed(5)}, ${lon.toFixed(5)}`;sug.style.display="none";
+    locked=true;center={lat,lng:lon};relock();map.easeTo({center:[lon,lat]});
   });
 
-  // -- Drag táctil burbuja --
-  let bubbleDragging = false;
-  circle.addEventListener("touchstart", e=>{
-    bubbleDragging = true;
-    map.dragPan.disable();
-    map.touchZoomRotate.disable();
-    map.doubleClickZoom.disable();
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  document.addEventListener("touchmove", e=>{
-    if(!bubbleDragging) return;
-    const t=e.touches[0];
-    const rect=map.getContainer().getBoundingClientRect();
+  let dragging=false;
+  document.addEventListener("touchstart",e=>{
+    const t=e.touches[0],rect=map.getContainer().getBoundingClientRect();
     const pt=[t.clientX-rect.left,t.clientY-rect.top];
-    centerLngLat=map.unproject(pt);
-    drawOverlay(); updateList();
-    e.preventDefault(); e.stopPropagation();
-  });
-  document.addEventListener("touchend", e=>{
-    if(!bubbleDragging) return;
-    bubbleDragging=false;
-    map.dragPan.enable();
-    map.touchZoomRotate.enable();
-    map.doubleClickZoom.enable();
-    e.preventDefault(); e.stopPropagation();
-  });
+    const pxPerMeter=1/mpp(center?.lat ?? 0, map.getZoom());
+    const radiusPx=radiusMeters * pxPerMeter;
+    const dist=Math.hypot(pt[0]-(circle.offsetLeft+radiusPx),pt[1]-(circle.offsetTop+radiusPx));
+    if(dist>radiusPx) return;
+    dragging=true;map.dragPan.disable();map.touchZoomRotate.disable();map.doubleClickZoom.disable();
+    e.preventDefault();
+  },{passive:false});
+  document.addEventListener("touchmove",e=>{
+    if(!dragging)return;
+    const t=e.touches[0],rect=map.getContainer().getBoundingClientRect();
+    center=map.unproject([t.clientX-rect.left,t.clientY-rect.top]);drawOverlay();updateList();
+    e.preventDefault();
+  },{passive:false});
+  document.addEventListener("touchend",()=>{if(!dragging)return;dragging=false;
+    map.dragPan.enable();map.touchZoomRotate.enable();map.doubleClickZoom.enable();},{passive:false});
 
-  // -- Inicio --
-  drawOverlay();
-  showToast("Usa el ratón (o toque) para explorar 🚍");
-  lucide.createIcons();
+  center=map.getCenter();drawOverlay();showToast("Usa ratón o toque para explorar 🚍");lucide.createIcons();
   </script>
 </body>
 </html>
